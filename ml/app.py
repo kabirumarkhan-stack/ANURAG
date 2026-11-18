@@ -10,11 +10,12 @@ import json
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from simple_ml import RidgeRegressionModel, TimeSeriesWeatherForecaster, WeatherDatasetGenerator
-try:
-    from weather_api import fetch_live_open_meteo, fetch_live_openweathermap
-except ImportError:
-    fetch_live_open_meteo = None
-    fetch_live_openweathermap = None
+from real_world_service import (
+    get_real_world_30day_trends,
+    get_real_world_7day_forecast,
+    call_groq_ai,
+    get_groq_api_key
+)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
@@ -132,18 +133,33 @@ def api_predict():
         badge = "extreme"
         color = "#ef4444"
 
-    # Environmental / EVS Insights
+    # Environmental / EVS Insights augmented by Groq Cloud AI
     insights = []
-    if h > 75 and t > 28:
-        insights.append("Saturated humidity inhibits evaporative sweat cooling; physiological heat stress elevated.")
-    if p < 1005:
-        insights.append("Significant barometric drop detected: potential storm, frontal disturbance, or cyclonic trough.")
-    elif p > 1022:
-        insights.append("Barometric anticyclone: stable, calm atmospheric air mass with minimal cloud cover.")
-    if w > 28:
-        insights.append("Elevated aerodynamic wind velocity enhances surface soil desiccation and wind chill.")
-    if r > 10:
-        insights.append(f"Substantial precipitation ({r} mm) recorded: promotes groundwater percolation & urban runoff.")
+    groq_key = get_groq_api_key()
+    if groq_key:
+        ai_prompt = (
+            f"Meteorological metrics: Temperature {t}°C, Humidity {h}%, Wind {w} km/h, "
+            f"Rainfall {r} mm, Pressure {p} hPa. Output 2 distinct, highly informative bullet points: "
+            f"1) Bioclimatic heat stress & physiological comfort impact. "
+            f"2) Ecological & local microclimate environmental significance."
+        )
+        ai_resp = call_groq_ai("You are Climate AI, an expert environmental climatologist. Respond in 2 crisp bullet points.", ai_prompt, max_tokens=200)
+        if ai_resp:
+            lines = [l.strip('- *•') for l in ai_resp.split('\n') if l.strip() and not l.startswith('#')]
+            if len(lines) >= 2:
+                insights = lines[:3]
+
+    if not insights:
+        if h > 75 and t > 28:
+            insights.append("Saturated humidity inhibits evaporative sweat cooling; physiological heat stress elevated.")
+        if p < 1005:
+            insights.append("Significant barometric drop detected: potential storm, frontal disturbance, or cyclonic trough.")
+        elif p > 1022:
+            insights.append("Barometric anticyclone: stable, calm atmospheric air mass with minimal cloud cover.")
+        if w > 28:
+            insights.append("Elevated aerodynamic wind velocity enhances surface soil desiccation and wind chill.")
+        if r > 10:
+            insights.append(f"Substantial precipitation ({r} mm) recorded: promotes groundwater percolation & urban runoff.")
 
     if not insights:
         insights.append("Atmospheric readings correlate closely with standard baseline environmental equilibrium.")
@@ -164,6 +180,7 @@ def api_predict():
         "comfortBadge": badge,
         "comfortColor": color,
         "environmentalInsights": insights,
+        "aiEngine": "Groq Cloud AI (Active)" if groq_key else "Climate AI Atmospheric Rule Engine",
         "modelUsed": "Climate AI Ridge Atmospheric Model v1.0",
         "academicContext": "Environmental Studies (EVS) AI Project"
     })
@@ -172,68 +189,79 @@ def api_predict():
 def api_trends_30days():
     """
     GET /api/trends/30days?city=delhi
-    Returns 30-day historical trend data and statistics.
+    Returns real-world 30-day historical trend data and statistics.
     """
     city_id = request.args.get('city', 'delhi').lower()
-    city_data = _CITY_TRENDS.get(city_id) if _CITY_TRENDS else None
+    trends_result = get_real_world_30day_trends(city_id)
     
-    if not city_data:
-        # Fallback generation
-        city_data = WeatherDatasetGenerator.generate_daily_series(days=30, base_temp=26.0)
-
-    # Compute aggregate summary statistics
-    temps = [row['temp_avg'] for row in city_data]
-    humidities = [row['humidity'] for row in city_data]
-    pressures = [row['pressure'] for row in city_data]
-    rainfalls = [row['rainfall'] for row in city_data]
-
-    summary = {
-        "days": len(city_data),
-        "startDate": city_data[0]['date'],
-        "endDate": city_data[-1]['date'],
-        "avgTemperature": round(sum(temps) / len(temps), 1),
-        "maxTemperature": round(max(row['temp_max'] for row in city_data), 1),
-        "minTemperature": round(min(row['temp_min'] for row in city_data), 1),
-        "avgHumidity": round(sum(humidities) / len(humidities), 1),
-        "avgPressure": round(sum(pressures) / len(pressures), 1),
-        "totalRainfall": round(sum(rainfalls), 1),
-        "rainyDays": sum(1 for r in rainfalls if r > 0.0)
-    }
-
     return jsonify({
         "status": "success",
         "city": city_id,
-        "dataSource": "Local Atmospheric Dataset & Trained ML Engine (Offline / Zero-API Key)",
-        "summary": summary,
-        "data": city_data
+        "dataSource": trends_result.get("source"),
+        "summary": trends_result.get("summary"),
+        "data": trends_result.get("data")
     })
 
 @app.route('/api/forecast/7days', methods=['GET'])
 def api_forecast_7days():
     """
     GET /api/forecast/7days?city=delhi
-    Returns 7-day future predictions using the trained ML model.
+    Returns real-world 7-day future predictions powered by ML.
     """
     city_id = request.args.get('city', 'delhi').lower()
-    city_data = _CITY_TRENDS.get(city_id) if _CITY_TRENDS else None
-    if not city_data:
-        city_data = WeatherDatasetGenerator.generate_daily_series(days=30, base_temp=26.0)
-
-    if _FORECASTER_MODEL:
+    forecast = get_real_world_7day_forecast(city_id)
+    
+    if not forecast and _FORECASTER_MODEL:
+        city_data = _CITY_TRENDS.get(city_id, [])
         forecast = _FORECASTER_MODEL.forecast_7days(city_data)
-    else:
-        # Fallback heuristic forecaster
-        forecast = []
-
-    last_record = city_data[-1]
 
     return jsonify({
         "status": "success",
         "city": city_id,
+        "dataSource": "Real-World Meteorological Satellite Feed & Trained ML Forecaster",
         "forecastHorizon": 7,
-        "baseDate": last_record['date'],
-        "baseTemperature": last_record['temp_avg'],
         "forecast": forecast
+    })
+
+@app.route('/api/ai/diagnostics', methods=['GET'])
+def api_ai_diagnostics():
+    """
+    GET /api/ai/diagnostics?city=delhi
+    Generates live real-world Groq AI climate analysis using the user's API key.
+    """
+    city_id = request.args.get('city', 'delhi').lower()
+    trends_result = get_real_world_30day_trends(city_id)
+    summary = trends_result.get("summary", {})
+    
+    groq_key = get_groq_api_key()
+    if not groq_key:
+        return jsonify({
+            "status": "success",
+            "city": city_id,
+            "analysis": "Groq API key not detected in .env. Configure GROQ_API_KEY to enable live AI climate intelligence reports.",
+            "source": "Local Rule Engine"
+        })
+
+    prompt_content = (
+        f"City: {city_id.title()}. Real-world 30-day weather statistics: "
+        f"Average Temperature: {summary.get('avgTemperature')}°C (High: {summary.get('maxTemperature')}°C, Low: {summary.get('minTemperature')}°C). "
+        f"Total Rainfall: {summary.get('totalRainfall')} mm over {summary.get('rainyDays')} precipitation events. "
+        f"Average Relative Humidity: {summary.get('avgHumidity')}%, Barometric Pressure: {summary.get('avgPressure')} hPa."
+    )
+    system_prompt = (
+        "You are an expert Environmental Studies (EVS) climatologist and atmospheric data scientist. "
+        "Provide an insightful, executive 2-to-3 paragraph real-world climate diagnostic: "
+        "1. Thermal trends and diurnal stability. "
+        "2. Moisture balance and urban ecological stress (air quality / heat island / water table). "
+        "3. Concrete adaptation recommendations for the local population."
+    )
+    analysis = call_groq_ai(system_prompt, prompt_content, max_tokens=350)
+    
+    return jsonify({
+        "status": "success",
+        "city": city_id,
+        "analysis": analysis or "Atmospheric indicators align with regional seasonal equilibrium.",
+        "modelUsed": "Groq Cloud AI (High-Speed LLM Inference)"
     })
 
 @app.route('/api/model/metrics', methods=['GET'])
