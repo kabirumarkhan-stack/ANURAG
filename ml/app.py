@@ -10,6 +10,11 @@ import json
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from simple_ml import RidgeRegressionModel, TimeSeriesWeatherForecaster, WeatherDatasetGenerator
+try:
+    from weather_api import fetch_live_open_meteo, fetch_live_openweathermap
+except ImportError:
+    fetch_live_open_meteo = None
+    fetch_live_openweathermap = None
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
@@ -198,6 +203,7 @@ def api_trends_30days():
     return jsonify({
         "status": "success",
         "city": city_id,
+        "dataSource": "Local Atmospheric Dataset & Trained ML Engine (Offline / Zero-API Key)",
         "summary": summary,
         "data": city_data
     })

@@ -54,6 +54,38 @@ python ml/train_models_cli.py
 
 ---
 
+## 🌦️ Weather Data & API Key Guide
+
+### Does this application require an API key?
+**NO, an API key is NOT required to run this project!**
+
+- **Built-in Offline ML Mode (Default & Zero-Friction)**:
+  The project includes built-in physical meteorological datasets and pre-trained Python Machine Learning models (`ml/forecaster_model.json` and `ml/environmental_model.json`). This ensures that your project runs seamlessly on **any computer, completely offline**, without risk of broken external links, expired trial keys, or rate-limiting.
+
+### Connecting Live Weather APIs (Optional)
+
+If you wish to fetch live real-time weather from external services, two options are provided:
+
+#### Option 1: Open-Meteo API (100% Free, No Key Required)
+- Uses real-time satellite & meteorological station feeds.
+- Completely open-source and free for educational / EVS projects.
+- **Requires zero API key**. Pre-configured inside `ml/weather_api.py`.
+
+#### Option 2: OpenWeatherMap API (Optional)
+If you have or want an OpenWeatherMap API key:
+1. Get a free API key at [OpenWeatherMap Sign Up](https://home.openweathermap.org/users/sign_up).
+2. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+3. Add your key inside `.env`:
+   ```env
+   OPENWEATHER_API_KEY=your_actual_api_key_here
+   ```
+4. Restart `python server.py`. The application will automatically pick up your key.
+
+---
+
 ## ✨ Features
 
 - 🌡️ **Interactive 30-Day Weather Trend Dashboard**:
