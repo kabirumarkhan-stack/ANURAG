@@ -1,0 +1,140 @@
+{
+  "project": "Climate AI - AI-Based Temperature Prediction for Environmental Monitoring",
+  "type": "Environmental Studies (EVS) Machine Learning Project",
+  "trained_timestamp": "2026-11-18 15:05:57",
+  "training_samples": 1000,
+  "environmental_model": {
+    "name": "Atmospheric Ridge Regression with Interaction Terms",
+    "r2_score": 0.9976,
+    "accuracy_percent": 99.76,
+    "mae": 0.2159,
+    "rmse": 0.2899,
+    "feature_importance": [
+      {
+        "feature": "Base Temperature",
+        "importance": 69.13,
+        "weight": 6.9533
+      },
+      {
+        "feature": "Temp-Humidity Interaction",
+        "importance": 18.09,
+        "weight": -1.8196
+      },
+      {
+        "feature": "Relative Humidity",
+        "importance": 10.9,
+        "weight": 1.0966
+      },
+      {
+        "feature": "Wind Speed",
+        "importance": 1.74,
+        "weight": -0.1754
+      },
+      {
+        "feature": "Rainfall",
+        "importance": 0.05,
+        "weight": 0.0046
+      },
+      {
+        "feature": "Atmospheric Pressure",
+        "importance": 0.04,
+        "weight": -0.0043
+      },
+      {
+        "feature": "Pressure Anomaly",
+        "importance": 0.04,
+        "weight": -0.0043
+      }
+    ]
+  },
+  "timeseries_forecaster": {
+    "name": "7-Day Multi-Horizon Autoregressive Harmonic Forecaster",
+    "horizon_days": 7,
+    "average_r2": 0.8955,
+    "accuracy_percent": 89.55,
+    "mae": 1.5811,
+    "rmse": 1.963,
+    "day_metrics": [
+      {
+        "day_ahead": 1,
+        "r2_score": 0.9328,
+        "mae": 1.2653,
+        "rmse": 1.5807
+      },
+      {
+        "day_ahead": 2,
+        "r2_score": 0.9141,
+        "mae": 1.4291,
+        "rmse": 1.7882
+      },
+      {
+        "day_ahead": 3,
+        "r2_score": 0.9003,
+        "mae": 1.5385,
+        "rmse": 1.9267
+      },
+      {
+        "day_ahead": 4,
+        "r2_score": 0.8895,
+        "mae": 1.6201,
+        "rmse": 2.028
+      },
+      {
+        "day_ahead": 5,
+        "r2_score": 0.882,
+        "mae": 1.6922,
+        "rmse": 2.0969
+      },
+      {
+        "day_ahead": 6,
+        "r2_score": 0.8767,
+        "mae": 1.7455,
+        "rmse": 2.1448
+      },
+      {
+        "day_ahead": 7,
+        "r2_score": 0.8732,
+        "mae": 1.7768,
+        "rmse": 2.1755
+      }
+    ]
+  },
+  "cities": [
+    {
+      "id": "delhi",
+      "name": "New Delhi, India",
+      "base_temp": 28.0,
+      "climate": "Subtropical Continental"
+    },
+    {
+      "id": "mumbai",
+      "name": "Mumbai, India",
+      "base_temp": 30.0,
+      "climate": "Tropical Coastal"
+    },
+    {
+      "id": "london",
+      "name": "London, UK",
+      "base_temp": 14.0,
+      "climate": "Temperate Oceanic"
+    },
+    {
+      "id": "newyork",
+      "name": "New York, USA",
+      "base_temp": 18.0,
+      "climate": "Humid Continental"
+    },
+    {
+      "id": "tokyo",
+      "name": "Tokyo, Japan",
+      "base_temp": 20.0,
+      "climate": "Humid Subtropical"
+    },
+    {
+      "id": "bengaluru",
+      "name": "Bengaluru, India",
+      "base_temp": 24.0,
+      "climate": "Tropical Savanna"
+    }
+  ]
+}
